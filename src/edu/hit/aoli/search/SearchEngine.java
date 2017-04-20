@@ -1,3 +1,4 @@
+package edu.hit.aoli.search;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -413,7 +414,7 @@ public class SearchEngine extends JFrame {
 		authorItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				JOptionPane.showMessageDialog(SearchEngine.this, "作者：胡艳\n学号：2013300208", 
+				JOptionPane.showMessageDialog(SearchEngine.this, "作者：李傲\n学号：16S103157", 
 						"作者", JOptionPane.OK_OPTION, authorIcon);
 			}
 		});
