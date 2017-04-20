@@ -7,7 +7,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.TreeSet;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,12 +26,12 @@ public class Spider {
 	public static int MAX_CAPACITY = 0x70000000;
 
 	private HashMap<String, String> title2URL;
-	private TreeSet<String> urlSet;
+	private Queue<String> urlQueue;
 	private HashSet<String> existed;
 	private int capacity;
 
 	public Spider() {
-		this(0x010000000);
+		this(100000);
 	}
 
 	/**
@@ -41,7 +42,7 @@ public class Spider {
 	 */
 	public Spider(int capacity) {
 		title2URL = new HashMap<>();
-		urlSet = new TreeSet<>();
+		urlQueue = new LinkedList<>();
 		existed = new HashSet<>();
 		if (capacity > MAX_CAPACITY)
 			this.capacity = MAX_CAPACITY;
@@ -56,33 +57,39 @@ public class Spider {
 	 *            first command argument refer to the initial URL
 	 */
 	public static void main(String[] args) {
-		if (args.length < 1)
-			 perror("Usage: java Spider [url]");
+		// if (args.length < 1)
+		// perror("Usage: java Spider [url]");
+
 		Spider s = new Spider();
-		//s.start("http://xueshu.baidu.com/");
-		s.start(args[0]);
+		s.start("https://baike.baidu.com/");
+		// s.start(args[0]);
 	}
 
 	public void start(String urlStr) {
 		clear();
-		urlSet.add(urlStr);
+		urlQueue.add(urlStr);
 		int iter = 0;
-		while (!urlSet.isEmpty() && existed.size() < capacity) {
-			String url = urlSet.pollFirst();
+		// String regex =
+		// "https?://baike\\.baidu\\.com/[\\w\\-_]+/[\\w\\-\\.,@?^=%&amp;:/~\\+#]*";
+		String regex = "https?://baike\\.baidu\\.com/item/[\\w\\-\\.,@?^=%&amp;:/~\\+#]*";
+		String prefix = "http://baike.baidu.com/";
+		while (!urlQueue.isEmpty() && existed.size() < capacity) {
+			String url = urlQueue.poll();
 			System.out.println(url);
-			extractTitleAndLinkFromURL(url);
-			if (++iter % 1000 == 0) output("result_" + iter);
+			extractTitleAndLinkFromURL(url, regex, prefix);
+			if (++iter % 1000 == 0)
+				output("result_" + iter);
 		}
 		System.out.println(title2URL.size());
 		output("result.txt");
 	}
-	
+
 	private void clear() {
-		urlSet.clear();
+		urlQueue.clear();
 		title2URL.clear();
 		existed.clear();
 	}
-	
+
 	private void output(String filename) {
 		try {
 			BufferedWriter bfw = new BufferedWriter(new FileWriter(filename));
@@ -102,34 +109,81 @@ public class Spider {
 	 * 
 	 * @param urlStr
 	 *            URL to be parse
+	 * @param absLinkRegex
+	 *            regular expression used to match the link from pages see as
+	 *            absolute path
+	 * @param relLinkPrefix
+	 *            prefix use to fill relative URL to absolute, if given null,
+	 *            use urlStr by default
+	 * 
 	 */
-	private void extractTitleAndLinkFromURL(String urlStr) {
+	private void extractTitleAndLinkFromURL(String urlStr, String absLinkRegex, String relLinkPrefix) {
+		if (relLinkPrefix == null)
+			relLinkPrefix = urlStr;
 		try {
-			URL urlPage = new URL(urlStr); 
-			HttpURLConnection conn = (HttpURLConnection) urlPage.openConnection();   
-			conn.setConnectTimeout(100);  	// 20 ms time limit  
-			conn.setReadTimeout(100);  		// 100 ms time limit
+
+			// set connect and read time limit
+			URL urlPage = new URL(urlStr);
+			HttpURLConnection conn = (HttpURLConnection) urlPage.openConnection();
+			conn.setConnectTimeout(2000);
+			conn.setReadTimeout(3000);
+			// parser
 			Parser parser = new Parser(conn);
 			parser.setEncoding("utf-8");
 			NodeFilter filter = new TagNameFilter("html");
 			NodeList nodes = parser.parse(filter);
 			// extract the title of page, build a map from title to url
-			title2URL.put(nodes.extractAllNodesThatMatch(new TagNameFilter("title"), true).asString(), urlStr);
+			String title = nodes.extractAllNodesThatMatch(new TagNameFilter("title"), true).asString();
+			title2URL.put(title, urlStr);
 			String content = nodes.toHtml();
-			// extract all links of this page, add them to set
-			String regex = "https?://\\w+\\.\\w+\\.\\w+";
-			Pattern pa = Pattern.compile(regex, Pattern.DOTALL);
+			output(content, "pages/" + title);
+			// extract all ABSOLUTE links of this page, add them to set
+			Pattern pa = Pattern.compile(absLinkRegex, Pattern.DOTALL);
 			Matcher ma = pa.matcher(content);
-			while (ma.find()) {	
+			while (ma.find()) {
 				String newUrl = ma.group();
 				if (!existed.contains(newUrl)) {
-					urlSet.add(newUrl);
+					urlQueue.add(newUrl);
 					existed.add(newUrl);
 				}
 			}
+			// extract all RELATIVE links of this page, add them to set
+			pa = Pattern.compile("href=\"/item[^\"]+\"");
+			ma = pa.matcher(content);
+			while (ma.find()) {
+				String newUrl = ma.group();
+				int start = newUrl.indexOf('/'), end = newUrl.lastIndexOf('\"');
+				if (start != -1 && end != -1 && (end - start) > 1) {
+					String absUrl = relLinkPrefix + newUrl.substring(newUrl.indexOf('/') + 1, newUrl.lastIndexOf('\"'));
+					if (!existed.contains(absUrl)) {
+						urlQueue.add(absUrl);
+						existed.add(absUrl);
+					}
+				}
+			}
+
 		} catch (ParserException | IOException e) {
-			return ;	// ignore the bad url
-//			perror(e.getMessage() + " url: " + urlStr);
+			return; // ignore the bad url
+			// perror(e.getMessage() + ": " + urlStr);
+		}
+	}
+
+	/**
+	 * Written content to file
+	 * 
+	 * @param content
+	 *            Content need to be output
+	 * @param filename
+	 *            Filename of the written file
+	 */
+	private void output(String content, String filename) {
+		try {
+			BufferedWriter bfw = new BufferedWriter(new FileWriter(filename));
+			bfw.write(content);
+			bfw.close();
+		} catch (IOException e) {
+			return;
+			// perror(e.getMessage());
 		}
 	}
 
