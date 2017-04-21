@@ -5,5 +5,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Apache Lucene"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Substance"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/HtmlParser"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Log4J"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
