@@ -1,2 +1,4 @@
 /edu/
+/IKAnalyzer.cfg.xml
+/stopword.dic
 /log4j.properties

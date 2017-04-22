@@ -1,5 +1,6 @@
 package edu.hit.aoli.spider;
 
+
 public class Demo {
 	
 	/**
@@ -11,9 +12,11 @@ public class Demo {
 	public static void main(String[] args) {
 		// if (args.length < 1)
 		// perror("Usage: java Spider [url]");
-		Page page = new Page();
-		Spider s = new Spider(page, 200000);
+		InvertIndexTable table = new InvertIndexTable();
+		Page page = new Page(table);
+		Spider s = new Spider(page, 100000);
 		s.start("https://baike.baidu.com/");
+		table.store();
 		// s.start(args[0]);
 	}
 }
