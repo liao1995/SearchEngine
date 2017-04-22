@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,18 +17,24 @@ import org.apache.log4j.Logger;
 import org.wltea.analyzer.core.IKSegmenter;
 import org.wltea.analyzer.core.Lexeme;
 
-class InvertIndexTable {
-	private static Logger logger = Logger.getLogger(Page.class);
+class InvertIndexTable implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private static Logger logger = Logger.getLogger(InvertIndexTable.class);
 	private static HashSet<String> stopWordSet;
 	private HashMap<String, LinkedList<DocItem>> table;
 	private ArrayList<String> titles; // title of each page
 	private ArrayList<String> urls; // URL of each page, one to one
 									// corresponding with titles
+	private int[] pagesOrder;		// order of the retrieval pages
 
 	public InvertIndexTable() {
 		table = new HashMap<>();
 		titles = new ArrayList<>();
 		urls = new ArrayList<>();
+		pagesOrder = null;
 		stopWordSet = new HashSet<>();
 		// read stop words from file
 		BufferedReader buffr = null;
@@ -103,14 +110,14 @@ class InvertIndexTable {
 		logger.info("try write invert index table to file...");
 		try {
 			ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("invert.table"));
-			oos.writeObject(table);
+			oos.writeObject(this);
 			oos.close();
 			FileWriter fw = new FileWriter("table.txt");
 			for (String key : table.keySet()) {
 				fw.write(key);
 				LinkedList<DocItem> list = table.get(key);
 				for (int i = 0; i < list.size(); ++i) {
-					fw.write(" -> " + list.get(i).getDocID() + "|" + list.get(i).getStartPos() + "|"
+					fw.write(" -> " + titles.get(list.get(i).getDocID()) + "|" + list.get(i).getStartPos() + "|"
 							+ list.get(i).getTF());
 				}
 				fw.write("\n");
@@ -123,4 +130,46 @@ class InvertIndexTable {
 		logger.info("write OK!");
 	}
 	
+	/**
+	 * Do search for query 
+	 * @param query 
+	 * @return the order of pages, use with titles, urls
+	 */
+	public int[] search(String query) {
+		this.pagesOrder = Search.search(table, query);
+		return pagesOrder;
+	}
+
+	/**
+	 * @return return the inverted index table
+	 */
+	public HashMap<String, LinkedList<DocItem>> getTable() {
+		return table;
+	}
+
+	/**
+	 * @return return the titles of documents with respect to docIDs
+	 */
+	public ArrayList<String> getTitles() {
+		return titles;
+	}
+
+	/**
+	 * @return return the urls of documents with respect to docIDs
+	 */
+	public ArrayList<String> getUrls() {
+		return urls;
+	}
+	
+	/**
+	 * @return return the pages order of retrieval
+	 */
+	public int[] getPagesOrder() {
+		if (null == pagesOrder) {
+			logger.error("please run search() firstly.");
+			return null;
+		}
+		return pagesOrder;
+	}
+
 }

@@ -20,6 +20,7 @@ import org.wltea.analyzer.core.Lexeme;
  */
 class Search {
 	private static Logger logger = Logger.getLogger(Page.class);
+	private static ArrayList<String> qryWords;
 
 	public static int[] search(HashMap<String, LinkedList<DocItem>> table, String query) {
 		if (table == null)
@@ -29,7 +30,7 @@ class Search {
 		IKSegmenter seg = new IKSegmenter(buffr, true);
 		Lexeme lex = null;
 		ArrayList<Integer> qryTF = new ArrayList<>();
-		ArrayList<String> qryWords = new ArrayList<>();
+		qryWords = new ArrayList<>();
 		try {
 			while ((lex = seg.next()) != null) {
 				String word = lex.getLexemeText();
@@ -56,9 +57,11 @@ class Search {
 		for (int i = 0; i < qryWords.size(); ++i) {
 			LinkedList<DocItem> list = table.get(qryWords.get(i));
 			HashMap<Integer, DocItem> map = new HashMap<>();
-			for (int j = 0; j < list.size(); ++j) {
-				map.put(list.get(j).getDocID(), list.get(j));
-				tree.add(list.get(j).getDocID());
+			if (list != null) {
+				for (int j = 0; j < list.size(); ++j) {
+					map.put(list.get(j).getDocID(), list.get(j));
+					tree.add(list.get(j).getDocID());
+				}
 			}
 			tmpMatrix.add(map);
 		}
@@ -73,35 +76,42 @@ class Search {
 			for (int i = 0; i < numDocs; ++i) // for each doc
 				matrix[i][j] = map.get(docIDs[i]);
 		}
-		debug(qryWords, docIDs, matrix);
+		// debug(qryWords, docIDs, matrix);
 		// calculate the jaccard similarity, sort the retrieval result
-		double[] dis = jaccard(qryTF, matrix);
+		double[] dis = similarity(qryTF, matrix, "jaccard");
 		ArrayList<Pair<Integer, Double>> pairs = new ArrayList<>();
 		for (int i = 0; i < dis.length; ++i)
 			pairs.add(new Pair<Integer, Double>(docIDs[i], dis[i]));
 		pairs.sort(new Comparator<Pair<Integer, Double>>() {
 			@Override
 			public int compare(Pair<Integer, Double> p1, Pair<Integer, Double> p2) {
-				// sort by jaccard distance
-				return p1.second - p2.second < 0 ? -1 : 1;
+				// sort by similarity
+				return p2.second.compareTo(p1.second);
 			}
 		});
 		int[] pageIDs = new int[pairs.size()];
 		for (int i = 0; i < pairs.size(); ++i)
 			pageIDs[i] = pairs.get(i).first;
+		// for (int i = 0; i < pairs.size(); ++i)
+		// System.out.print(pairs.get(i).first + " " + pairs.get(i).second +
+		// "\t");
 		return pageIDs;
 	}
 
 	/**
-	 * Calculate the Jaccard distance between query sentence and all contents
+	 * Calculate the similarity between query sentence and all contents
 	 * 
 	 * @param qryTF
 	 *            TF of query words
 	 * @param items
 	 *            array of pages, each page hold all related words TF
+	 * @param metrics
+	 *            metrics of similarity, such as 'cosine' for cosine similarity,
+	 *            'jaccard' for jaccard distance. Note that jaccard distance
+	 *            will be opposite to negative to hold the similarity property
 	 * @return the similarity vector between query sentence and each page
 	 */
-	private static double[] jaccard(ArrayList<Integer> qryTF, DocItem[][] items) {
+	private static double[] similarity(ArrayList<Integer> qryTF, DocItem[][] items, String metrics) {
 		int numDocs = items.length, numWords = qryTF.size();
 		double[] dis = new double[numDocs];
 		for (int i = 0; i < numDocs; ++i) {
@@ -113,7 +123,16 @@ class Search {
 					a_b += items[i][j].getTF() * qryTF.get(j);
 				}
 			}
-			dis[i] = a_b / (a_2 + b_2 - a_b);
+			if (metrics.equals("jaccard"))
+				dis[i] = -(a_b / (a_2 + b_2 - a_b)); // to hold similarity
+														// property
+			else if (metrics.equals("cosine")) {
+				if (a_b == 0)
+					dis[i] = 0;
+				else
+					dis[i] = a_b / (Math.sqrt(a_2) * Math.sqrt(b_2));
+			} else
+				Utils.perror("Unknown metrics: " + metrics);
 		}
 		return dis;
 	}
@@ -139,5 +158,9 @@ class Search {
 			}
 			System.out.println();
 		}
+	}
+	
+	public static ArrayList<String> getQueryWords() {
+		return qryWords;
 	}
 }

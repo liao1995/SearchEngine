@@ -15,6 +15,15 @@ import org.htmlparser.util.NodeList;
  */
 class Page {
 	private InvertIndexTable table;
+	private boolean storePage;
+
+	/**
+	 * @see #Page(InvertIndexTable, boolean)
+	 * @param table
+	 */
+	public Page(InvertIndexTable table) {
+		this(table, false);
+	}
 
 	/**
 	 * Create page class, for doing page segmentation, and build the invert
@@ -23,9 +32,12 @@ class Page {
 	 * @param table
 	 *            the invert index table to be built, if given null, then will
 	 *            not build invert index table
+	 * @param storePage
+	 *            store the grabbed pages or not, default not
 	 */
-	public Page(InvertIndexTable table) {
+	public Page(InvertIndexTable table, boolean storePage) {
 		this.table = table;
+		this.storePage = storePage;
 	}
 
 	public void segment(NodeList nodes, String urlStr) {
@@ -51,6 +63,7 @@ class Page {
 		// to help build the invert index table
 		if (table != null)
 			table.insertTableByNewPage(urlStr, title, content);
-//		Utils.output(content, "pages/" + title);
+		if (storePage)
+			Utils.output(content, "pages/" + title);
 	}
 }

@@ -23,28 +23,29 @@ class Spider {
 	 * Max capacity of the set, e.g. maximum urls to be grabbed
 	 */
 	public static int MAX_CAPACITY = 0x70000000;
-
+	public static String DEFAULT_INIT_URL = "https://baike.baidu.com/";
 	private Queue<String> urlQueue;
 	private HashSet<String> existed;
 	private int capacity;
 	private Page pageSeg; // page segmentation
+	private String initURL; 	// initial URL
 
 	public Spider() {
-		this(null, 100000);
+		this(null, 100000, DEFAULT_INIT_URL);
 	}
 
 	/**
 	 * @see #Spider(Page, int)
 	 */
 	public Spider(int capacity) {
-		this(null, capacity);
+		this(null, capacity, DEFAULT_INIT_URL);
 	}
-	
+
 	/**
 	 * @see #Spider(Page, int)
 	 */
 	public Spider(Page page) {
-		this(page, 100000);
+		this(page, 100000, DEFAULT_INIT_URL);
 	}
 
 	/**
@@ -58,20 +59,22 @@ class Spider {
 	 * @param page
 	 *            the page segmentation tool
 	 */
-	public Spider(Page page, int capacity) {
+	public Spider(Page page, int capacity, String initURL) {
 		this.pageSeg = page;
+		if (null == initURL) initURL = DEFAULT_INIT_URL;
+		this.initURL = initURL;
 		urlQueue = new LinkedList<>();
 		existed = new HashSet<>();
-		if (capacity > MAX_CAPACITY)
+		if (capacity > MAX_CAPACITY || capacity < 0)
 			this.capacity = MAX_CAPACITY;
 		else
 			this.capacity = capacity;
 	}
 
-
-	public void start(String urlStr) {
+	public void start() {
 		clear();
-		urlQueue.add(urlStr);
+		urlQueue.add(initURL);
+//		urlQueue.add("http://baike.baidu.com/item/%E5%93%88%E5%B0%94%E6%BB%A8%E5%B7%A5%E4%B8%9A%E5%A4%A7%E5%AD%A6");
 		int iter = 0;
 		// String regex =
 		// "https?://baike\\.baidu\\.com/[\\w\\-_]+/[\\w\\-\\.,@?^=%&amp;:/~\\+#]*";
@@ -155,7 +158,7 @@ class Spider {
 					}
 				}
 			}
-			
+
 		} catch (ParserException | IOException e) {
 			return; // ignore the bad url
 		}
