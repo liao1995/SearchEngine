@@ -110,8 +110,8 @@ class InvertIndexTable {
 				fw.write(key);
 				LinkedList<DocItem> list = table.get(key);
 				for (int i = 0; i < list.size(); ++i) {
-					fw.write(" -> " + titles.get(list.get(i).getId()) + "|" + list.get(i).getStart() + "|"
-							+ list.get(i).getNum());
+					fw.write(" -> " + list.get(i).getDocID() + "|" + list.get(i).getStartPos() + "|"
+							+ list.get(i).getTF());
 				}
 				fw.write("\n");
 				fw.flush();
@@ -122,4 +122,5 @@ class InvertIndexTable {
 		}
 		logger.info("write OK!");
 	}
+	
 }

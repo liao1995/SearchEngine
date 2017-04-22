@@ -13,41 +13,41 @@ class DocItem implements Serializable{
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private int id; // document id
-	private int start; // start position of this word in this document
-	private int num; // number of this word in this document
+	private int docID; 	// document id
+	private int start; 	// start position of this word in this document
+	private int tf; 	// number of this word in this document
 
 	public DocItem(int id, int start) {
-		this.id = id;
+		this.docID = id;
 		this.start = start;
-		this.num = 0;
+		this.tf = 0;
 	}
 
-	public int getId() {
-		return id;
+	public int getDocID() {
+		return docID;
 	}
 
-	public void setId(int id) {
-		this.id = id;
+	public void setDocID(int id) {
+		this.docID = id;
 	}
 
-	public int getStart() {
+	public int getStartPos() {
 		return start;
 	}
 
-	public void setStart(int start) {
+	public void setStartPos(int start) {
 		this.start = start;
 	}
 
-	public int getNum() {
-		return num;
+	public int getTF() {
+		return tf;
 	}
 
 	public void increase() {
-		++this.num;
+		++this.tf;
 	}
 	
 	public void reset() {
-		this.num = 0;
+		this.tf = 0;
 	}
 }
